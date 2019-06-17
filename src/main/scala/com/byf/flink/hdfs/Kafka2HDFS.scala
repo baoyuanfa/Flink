@@ -1,6 +1,9 @@
 package com.byf.flink.hdfs
 
 import com.byf.flink.util.MyKafkaUtil
+import org.apache.flink.api.common.serialization.SimpleStringEncoder
+import org.apache.flink.core.fs.Path
+import org.apache.flink.streaming.api.functions.sink.filesystem.StreamingFileSink
 import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
 import org.apache.flink.streaming.connectors.fs.StringWriter
 import org.apache.flink.streaming.connectors.fs.bucketing.BucketingSink
@@ -17,9 +20,18 @@ object Kafka2HDFS {
         import org.apache.flink.api.scala._
         val kafkaDStream: DataStream[String] = env.addSource(kafkaSource)
 
-        val hdfsSink = new BucketingSink[String]("hdfs://hadoop102:9000/flink2hdfs")
+        /*val hdfsSink = new BucketingSink[String]("hdfs://hadoop102:9000/flink2hdfs")
         hdfsSink.setWriter(new StringWriter()).setBatchSize(20).setBatchRolloverInterval(2000)
-        kafkaDStream.addSink(hdfsSink)
+        kafkaDStream.addSink(hdfsSink)*/
+
+        //流文件系统
+        val sink: StreamingFileSink[String] = StreamingFileSink
+                .forRowFormat(new Path("/flinkStream2hdfs"), new SimpleStringEncoder[String]("UTF-8"))
+                .withBucketCheckInterval(1000*60)
+                .build()
+
+        kafkaDStream.addSink(sink)
+
 
         env.execute()
 
